@@ -10,7 +10,6 @@ class Editor:
         self.setup_ui()
         self.setup_menu()
         self.key_binds()
-        self.teg_init()
         self.terminal_field.insert('end', '>')
 
     def setup_ui(self):
@@ -41,9 +40,35 @@ class Editor:
     def key_binds(self):
         self.terminal_field.bind('<Return>', self.run_command) 
         self.terminal_field.bind('<Key>', self.check_readonly)
+        self.input_field.bind('<KeyRelease>', self.highlight)
 
-    def teg_init(self):
-        self.terminal_field.tag_config('readonly')
+    def highlight(self, event = None):
+        color_highlight = {'import': 'orange', 
+                        'from': 'orange', 
+                        'as': 'orange',
+                        'def': 'blue', 
+                        'class': 'blue',
+                        'if': 'orange', 
+                        'else': 'orange', 
+                        'elif': 'orange',
+                        'return': 'purple', 
+                        'None': 'red', 
+                        'True': 'green', 
+                        'False': 'green'}
+
+        for i in color_highlight.keys(): # remove all tegs
+            self.input_field.tag_remove(i,'1.0',tk.END)
+
+        for word, color in color_highlight.items():
+            self.input_field.tag_configure(word, foreground = color)
+            start = '1.0'
+            while True:
+                start = self.input_field.search(fr'\y{word}\y',start,stopindex = tk.END, regexp = True)
+                if not start:
+                    break
+                stop = f'{start}+{len(word)}c'
+                self.input_field.tag_add(word,start,stop)
+                start = stop      
 
     def check_readonly(self,event):
         cursor_index = self.terminal_field.index(tk.INSERT)
