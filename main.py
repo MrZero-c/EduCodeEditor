@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import scrolledtext, filedialog, ttk
 import subprocess
-from jedi import Script
+import re
 
 class Editor:
     def __init__(self,root):
@@ -10,7 +10,7 @@ class Editor:
         self.setup_ui()
         self.setup_menu()
         self.key_binds()
-        self.teg_init()
+        self.tag_init()
         self.terminal_field.insert('end', '>')
 
     def setup_ui(self):
@@ -41,9 +41,39 @@ class Editor:
     def key_binds(self):
         self.terminal_field.bind('<Return>', self.run_command) 
         self.terminal_field.bind('<Key>', self.check_readonly)
+        self.input_field.bind('<KeyRelease>', self.highlight)
 
-    def teg_init(self):
-        self.terminal_field.tag_config('readonly')
+    def tag_init(self):
+        self.input_field.tag_config('keyword', foreground = '#c678dd')
+        self.input_field.tag_config('number', foreground = '#d19a66')
+        self.input_field.tag_config('comment', foreground = '#98c379')
+        self.input_field.tag_config('string', foreground = '#5c6370')
+
+
+
+    def highlight(self, event = None):
+        patterns = {
+                'keyword':r'\b(if|else|for|while|def|import|return|elif|continue|in|as)',
+                'number':r'\b\d+\b',
+                'comment':r'#.*',
+                'string':r'\".*?\"|\'.*?\'',
+                }
+
+        full_regex = "|".join([f"(?P<{name}>{pattern})" for name, pattern in patterns.items()])
+
+        for i in patterns.keys():
+            self.input_field.tag_remove(i,'1.0', tk.END)
+
+        text = self.input_field.get('1.0', tk.END) 
+
+        for match in re.finditer(full_regex, text):
+            kind = match.lastgroup
+            value = match.group()
+            start_index = f'1.0 + {match.start()} chars'
+            end_index = f'1.0 + {match.end()} chars'
+            self.input_field.tag_add(kind,start_index, end_index)
+
+
 
     def check_readonly(self,event):
         cursor_index = self.terminal_field.index(tk.INSERT)
