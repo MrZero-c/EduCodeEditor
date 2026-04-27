@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import scrolledtext, filedialog, ttk
 import subprocess
+import re
 
 class Editor:
     def __init__(self,root):
@@ -9,6 +10,7 @@ class Editor:
         self.setup_ui()
         self.setup_menu()
         self.key_binds()
+        self.tag_init()
         self.terminal_field.insert('end', '>')
 
     def setup_ui(self):
@@ -41,33 +43,37 @@ class Editor:
         self.terminal_field.bind('<Key>', self.check_readonly)
         self.input_field.bind('<KeyRelease>', self.highlight)
 
+    def tag_init(self):
+        self.input_field.tag_config('keyword', foreground = '#c678dd')
+        self.input_field.tag_config('number', foreground = '#d19a66')
+        self.input_field.tag_config('comment', foreground = '#98c379')
+        self.input_field.tag_config('string', foreground = '#5c6370')
+
+
+
     def highlight(self, event = None):
-        color_highlight = {'import': 'orange', 
-                        'from': 'orange', 
-                        'as': 'orange',
-                        'def': 'blue', 
-                        'class': 'blue',
-                        'if': 'orange', 
-                        'else': 'orange', 
-                        'elif': 'orange',
-                        'return': 'purple', 
-                        'None': 'red', 
-                        'True': 'green', 
-                        'False': 'green'}
+        patterns = {
+                'keyword':r'\b(if|else|for|while|def|import|return|elif|continue|in|as)',
+                'number':r'\b\d+\b',
+                'comment':r'#.*',
+                'string':r'\".*?\"|\'.*?\'',
+                }
 
-        for i in color_highlight.keys(): # remove all tegs
-            self.input_field.tag_remove(i,'1.0',tk.END)
+        full_regex = "|".join([f"(?P<{name}>{pattern})" for name, pattern in patterns.items()])
 
-        for word, color in color_highlight.items():
-            self.input_field.tag_configure(word, foreground = color)
-            start = '1.0'
-            while True:
-                start = self.input_field.search(fr'\y{word}\y',start,stopindex = tk.END, regexp = True)
-                if not start:
-                    break
-                stop = f'{start}+{len(word)}c'
-                self.input_field.tag_add(word,start,stop)
-                start = stop      
+        for i in patterns.keys():
+            self.input_field.tag_remove(i,'1.0', tk.END)
+
+        text = self.input_field.get('1.0', tk.END) 
+
+        for match in re.finditer(full_regex, text):
+            kind = match.lastgroup
+            value = match.group()
+            start_index = f'1.0 + {match.start()} chars'
+            end_index = f'1.0 + {match.end()} chars'
+            self.input_field.tag_add(kind,start_index, end_index)
+
+
 
     def check_readonly(self,event):
         cursor_index = self.terminal_field.index(tk.INSERT)
