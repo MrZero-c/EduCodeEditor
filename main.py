@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import scrolledtext, filedialog, ttk
 import subprocess
-from jedi import Script
 
 class Editor:
     def __init__(self,root):
