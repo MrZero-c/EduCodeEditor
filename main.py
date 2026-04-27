@@ -53,7 +53,7 @@ class Editor:
 
     def highlight(self, event = None):
         patterns = {
-                'keyword':r'\b(if|else|for|while|def|import|return|elif|continue|in|as)',
+                'keyword':r'\b(if|else|for|while|def|import|return|elif|continue|in|as)\b',
                 'number':r'\b\d+\b',
                 'comment':r'#.*',
                 'string':r'\".*?\"|\'.*?\'',
