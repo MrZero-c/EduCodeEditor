@@ -72,11 +72,6 @@ class Editor:
         
         start_visible_area = self.input_field.index('@0,0') 
         end_visible_area = self.input_field.index(f'@0,{self.input_field.winfo_height()}') 
-        start_visible_lines, x = start_visible_area.split('.')
-        end_visible_lines, x = end_visible_area.split('.')
-        print(start_visible_area,end_visible_area)
-        print(start_visible_lines, end_visible_lines)
-
 
         for i in patterns.keys():
             self.input_field.tag_remove(i, start_visible_area, end_visible_area)
@@ -86,9 +81,10 @@ class Editor:
         for match in re.finditer(full_regex, text):
             kind = match.lastgroup
             value = match.group()
-            start_index = f'1.0 + {match.start()} chars'
-            end_index = f'1.0 + {match.end()} chars'
-            self.input_field.tag_add(kind,start_index,end_index)
+            start_index = f'{start_visible_area} + {match.start()} chars'
+            end_index = f'{start_visible_area} + {match.end()} chars '
+            print(f'Будут закрашены: с {start_index}',f' до {end_index}')
+            self.input_field.tag_add(kind,f'{start_index}',f'{end_index}')
 
 
 
