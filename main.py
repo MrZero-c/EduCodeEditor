@@ -43,10 +43,6 @@ class Editor:
         self.terminal_field.bind('<Return>', self.run_command) 
         self.terminal_field.bind('<Key>', self.check_readonly)
         self.input_field.bind('<KeyRelease>', self.highlight)
-        self.input_field.bind('<Button-4>', self.highlight)
-        self.input_field.bind('<Button-5>', self.highlight)
-
-
 
     def tag_init(self):
         self.input_field.tag_config('keyword', foreground = '#800080')
@@ -69,21 +65,18 @@ class Editor:
                 }
 
         full_regex = "|".join([f"(?P<{name}>{pattern})" for name, pattern in patterns.items()])
-        
-        start_visible_area = self.input_field.index('@0,0') 
-        end_visible_area = self.input_field.index(f'@0,{self.input_field.winfo_height()}') 
 
         for i in patterns.keys():
-            self.input_field.tag_remove(i, start_visible_area, end_visible_area)
+            self.input_field.tag_remove(i,'1.0', tk.END)
 
-        text = self.input_field.get(start_visible_area, end_visible_area) 
+        text = self.input_field.get('1.0', tk.END) 
 
         for match in re.finditer(full_regex, text):
             kind = match.lastgroup
             value = match.group()
-            start_index = f'{start_visible_area} + {match.start()} chars'
-            end_index = f'{start_visible_area} + {match.end()} chars '
-            self.input_field.tag_add(kind,f'{start_index}',f'{end_index}')
+            start_index = f'1.0 + {match.start()} chars'
+            end_index = f'1.0 + {match.end()} chars'
+            self.input_field.tag_add(kind,start_index, end_index)
 
 
 
