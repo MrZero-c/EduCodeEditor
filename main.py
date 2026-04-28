@@ -11,6 +11,7 @@ class Editor:
         self.setup_menu()
         self.key_binds()
         self.tag_init()
+        self.highlight()
         self.terminal_field.insert('end', '>')
 
     def setup_ui(self):
@@ -44,19 +45,23 @@ class Editor:
         self.input_field.bind('<KeyRelease>', self.highlight)
 
     def tag_init(self):
-        self.input_field.tag_config('keyword', foreground = '#c678dd')
+        self.input_field.tag_config('keyword', foreground = '#800080')
         self.input_field.tag_config('number', foreground = '#d19a66')
-        self.input_field.tag_config('comment', foreground = '#98c379')
-        self.input_field.tag_config('string', foreground = '#5c6370')
+        self.input_field.tag_config('comment', foreground = '#5c6370')
+        self.input_field.tag_config('string', foreground = '#008000')
+        self.input_field.tag_config('oopword', foreground = '#D2691E')
+        self.input_field.tag_config('prepositions', foreground = '#0000FF')
 
 
 
     def highlight(self, event = None):
         patterns = {
-                'keyword':r'\b(if|else|for|while|def|import|return|elif|continue|in|as)\b',
+                'keyword':r'\b(if|else|for|while|def|import|return|elif|continue|range|from)\b',
                 'number':r'\b\d+\b',
                 'comment':r'#.*',
                 'string':r'\".*?\"|\'.*?\'',
+                'oopword':r'\b(self)\b',
+                'prepositions':r'\b(in|as|note|None)\b'
                 }
 
         full_regex = "|".join([f"(?P<{name}>{pattern})" for name, pattern in patterns.items()])
@@ -95,6 +100,7 @@ class Editor:
             self.input_field.insert(tk.INSERT, open_file_text)
             self.root.title(ask_file_path) 
             self.file_save_path = ask_file_path 
+        self.highlight()
 
     def new_file(self, event = None):
         self.file_save_path = None
