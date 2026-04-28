@@ -83,7 +83,6 @@ class Editor:
             value = match.group()
             start_index = f'{start_visible_area} + {match.start()} chars'
             end_index = f'{start_visible_area} + {match.end()} chars '
-            print(f'Будут закрашены: с {start_index}',f' до {end_index}')
             self.input_field.tag_add(kind,f'{start_index}',f'{end_index}')
 
 
