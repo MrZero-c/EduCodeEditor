@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import scrolledtext, filedialog, ttk
 import subprocess
 import re
+import themes
 
 class Editor:
     def __init__(self,root):
@@ -12,6 +13,8 @@ class Editor:
         self.key_binds()
         self.tag_init()
         self.highlight()
+        self.themes_menu_setup()
+        self.theme = None
         self.terminal_field.insert('end', '>')
 
     def setup_ui(self):
@@ -34,10 +37,20 @@ class Editor:
         self.file_menu.add_command(label = "Открыть",command = self.open_file)
         self.file_menu.add_command(label = "Новый", command = self.new_file)
         self.file_menu.add_command(label = "Сохранить", command = self.save_file)
-        
+
         # Функциональные кнопки
 
         self.main_menu.add_command(label = "Запустить", command = self.run_script)
+ 
+    def themes_menu_setup(self):
+
+        themes_list = {'Black': themes.GRUVBOX_DARK,
+                       'Tokyo_night': themes.TOKYO_NIGHT,}
+
+        self.themes_menu = tk.Menu(self.main_menu, tearoff = 0)
+        self.main_menu.add_cascade(label = "Темы", menu = self.themes_menu)
+        for  label, name in themes_list.items():
+            self.themes_menu.add_command(label = label, command = lambda t=name: self.change_theme(t))
 
     def key_binds(self):
         self.terminal_field.bind('<Return>', self.run_command) 
@@ -53,6 +66,18 @@ class Editor:
         self.input_field.tag_config('prepositions', foreground = '#0000FF')
 
 
+    def change_theme(self,theme):
+        if theme:
+            self.root.config(bg = theme['root_bg'])
+            self.input_field.config(bg = theme['input_bg'], fg = theme['input_fg'],bd = 0,relief = 'flat',highlightthickness=0)
+            self.terminal_field.config(bg = theme['term_bg'], fg = theme['term_fg'],bd = 0, relief = 'flat',highlightthickness=0)
+            self.main_menu.config(bg = theme['menu_bg'],fg = theme['menu_fg'],bd = 0, relief = 'flat')
+
+            menus = [self.file_menu, self.themes_menu]
+
+            for m in menus:
+                m.config(bg = theme['menu_bg'],fg = theme['menu_fg'])
+        
 
     def highlight(self, event = None):
         patterns = {
