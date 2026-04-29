@@ -10,11 +10,11 @@ class Editor:
         self.root = root
         self.setup_ui()
         self.setup_menu()
+        self.themes_menu_setup()
+        self.change_theme(themes.LIGHT_THEME)
         self.key_binds()
         self.tag_init()
         self.highlight()
-        self.themes_menu_setup()
-        self.theme = None
         self.terminal_field.insert('end', '>')
 
     def setup_ui(self):
@@ -44,12 +44,14 @@ class Editor:
  
     def themes_menu_setup(self):
 
-        themes_list = {'Black': themes.GRUVBOX_DARK,
-                       'Tokyo_night': themes.TOKYO_NIGHT,}
+        self.themes_list = {'Black': themes.DARK_THEME,
+                       'Tokyo_night': themes.TOKYO_NIGHT,
+                       'White': themes.LIGHT_THEME}
+
 
         self.themes_menu = tk.Menu(self.main_menu, tearoff = 0)
         self.main_menu.add_cascade(label = "Темы", menu = self.themes_menu)
-        for  label, name in themes_list.items():
+        for  label, name in self.themes_list.items():
             self.themes_menu.add_command(label = label, command = lambda t=name: self.change_theme(t))
 
     def key_binds(self):
@@ -58,25 +60,28 @@ class Editor:
         self.input_field.bind('<KeyRelease>', self.highlight)
 
     def tag_init(self):
-        self.input_field.tag_config('keyword', foreground = '#800080')
-        self.input_field.tag_config('number', foreground = '#d19a66')
-        self.input_field.tag_config('comment', foreground = '#5c6370')
-        self.input_field.tag_config('string', foreground = '#008000')
-        self.input_field.tag_config('oopword', foreground = '#D2691E')
-        self.input_field.tag_config('prepositions', foreground = '#0000FF')
+        self.input_field.tag_config('keyword', foreground = self.syntax_theme['keyword'])
+        self.input_field.tag_config('number', foreground = self.syntax_theme['number'])
+        self.input_field.tag_config('comment', foreground = self.syntax_theme['comment'])
+        self.input_field.tag_config('string', foreground = self.syntax_theme['string'])
+        self.input_field.tag_config('oopword', foreground = self.syntax_theme['oopword'])
+        self.input_field.tag_config('prepositions', foreground = self.syntax_theme['prepositions'])
 
 
     def change_theme(self,theme):
         if theme:
             self.root.config(bg = theme['root_bg'])
-            self.input_field.config(bg = theme['input_bg'], fg = theme['input_fg'],bd = 0,relief = 'flat',highlightthickness=0)
-            self.terminal_field.config(bg = theme['term_bg'], fg = theme['term_fg'],bd = 0, relief = 'flat',highlightthickness=0)
+            self.input_field.config(bg = theme['input_bg'], fg = theme['input_fg'],bd = 0,relief = 'flat',highlightthickness=0,insertbackground=theme['cursor'])
+            self.terminal_field.config(bg = theme['term_bg'], fg = theme['term_fg'],bd = 0, relief = 'flat',highlightthickness=0,insertbackground=theme['cursor'])
             self.main_menu.config(bg = theme['menu_bg'],fg = theme['menu_fg'],bd = 0, relief = 'flat')
 
             menus = [self.file_menu, self.themes_menu]
 
             for m in menus:
                 m.config(bg = theme['menu_bg'],fg = theme['menu_fg'])
+
+            self.syntax_theme = theme['syntax']
+            self.tag_init()
         
 
     def highlight(self, event = None):
@@ -85,7 +90,7 @@ class Editor:
                 'number':r'\b\d+\b',
                 'comment':r'#.*',
                 'string':r'\".*?\"|\'.*?\'',
-                'oopword':r'\b(self)\b',
+                'oopword':r'\b(self|class)\b',
                 'prepositions':r'\b(in|as|note|None)\b'
                 }
 
