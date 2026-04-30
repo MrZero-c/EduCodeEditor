@@ -71,8 +71,10 @@ class Editor:
     def change_theme(self,theme):
         if theme:
             self.root.config(bg = theme['root_bg'])
-            self.input_field.config(bg = theme['input_bg'], fg = theme['input_fg'],bd = 0,relief = 'flat',highlightthickness=0,insertbackground=theme['cursor'])
-            self.terminal_field.config(bg = theme['term_bg'], fg = theme['term_fg'],bd = 0, relief = 'flat',highlightthickness=0,insertbackground=theme['cursor'])
+            self.input_field.config(bg = theme['input_bg'], fg = theme['input_fg'],bd = 0,relief = 'flat',
+                                    highlightthickness=0,insertbackground=theme['cursor'])
+            self.terminal_field.config(bg = theme['term_bg'], fg = theme['term_fg'],bd = 0, relief = 'flat',
+                                       highlightthickness=0,insertbackground=theme['cursor'])
             self.main_menu.config(bg = theme['menu_bg'],fg = theme['menu_fg'],bd = 0, relief = 'flat')
 
             menus = [self.file_menu, self.themes_menu]
@@ -167,10 +169,14 @@ class Editor:
 
     def run_command(self, event = None):
         terminal_command = self.get_terminal_command()
-        command_result = subprocess.run(terminal_command, shell = True, capture_output = True, text = True)
-        self.terminal_field.insert(tk.END, f'\n{command_result.stdout}', 'readonly')
+
+        command_result = subprocess.Popen(terminal_command, stdout = subprocess.PIPE, stderr = subprocess.PIPE,
+                                        shell = True, text = True)
+        stdout, stderr = command_result.communicate()
+
+        self.terminal_field.insert(tk.END, f'\n{stdout}', 'readonly')
         if command_result.stderr:
-            self.terminal_field.insert(tk.END, f'\n{command_result.stderr}', 'readonly')
+            self.terminal_field.insert(tk.END, f'\n{stderr}', 'readonly')
         self.terminal_field.insert(tk.INSERT, '>', 'readonly')
         self.terminal_field.see(tk.END)
         if event is not None:
