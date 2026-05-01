@@ -185,20 +185,24 @@ class Editor:
         
         try:
             line = self.q.get_nowait()
-            self.terminal_field.insert(tk.END,f'\n{line}', 'readonly')
+            self.terminal_field.insert(tk.END,f'{line}', 'readonly')
             self.terminal_field.see(tk.END)
             self.q.task_done()
         except queue.Empty:
             pass
-        root.after(50, self.get_async_output)
+        
+        root.after(1, self.get_async_output)
 
 
     def async_popen(self,command):
         command_result = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True, text = True,bufsize = 1)
+        self.q.put(f'\n')
         for line in iter(command_result.stdout.readline, ''):
             self.q.put(line)
-        if command_result.stderr:
-            self.q.put(command_result.stderr)
+        for line in iter(command_result.stderr.readline, ''):
+            if line:
+                self.q.put(f'\n{line}')
+        self.q.put(f'>')
 
 
     def run_script(self):
@@ -210,3 +214,4 @@ if __name__ == '__main__':
     root = tk.Tk()
     app = Editor(root)
     root.mainloop()
+
