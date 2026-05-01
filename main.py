@@ -3,6 +3,8 @@ from tkinter import scrolledtext, filedialog, ttk
 import subprocess
 import re
 import themes
+import threading
+import queue
 
 class Editor:
     def __init__(self,root):
@@ -169,18 +171,35 @@ class Editor:
 
     def run_command(self, event = None):
         terminal_command = self.get_terminal_command()
+        self.thread_popen = threading.Thread(target = self.async_popen, args=(terminal_command,))
+        self.q = queue.Queue()
+        self.thread_popen.daemon = True
+        self.thread_popen.start()
 
-        command_result = subprocess.Popen(terminal_command, stdout = subprocess.PIPE, stderr = subprocess.PIPE,
-                                        shell = True, text = True)
-        stdout, stderr = command_result.communicate()
-
-        self.terminal_field.insert(tk.END, f'\n{stdout}', 'readonly')
-        if command_result.stderr:
-            self.terminal_field.insert(tk.END, f'\n{stderr}', 'readonly')
-        self.terminal_field.insert(tk.INSERT, '>', 'readonly')
-        self.terminal_field.see(tk.END)
+        self.get_async_output()
+        
         if event is not None:
             return "break"
+
+    def get_async_output(self):
+        
+        try:
+            line = self.q.get_nowait()
+            self.terminal_field.insert(tk.END,f'\n{line}', 'readonly')
+            self.terminal_field.see(tk.END)
+            self.q.task_done()
+        except queue.Empty:
+            pass
+        root.after(50, self.get_async_output)
+
+
+    def async_popen(self,command):
+        command_result = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True, text = True,bufsize = 1)
+        for line in iter(command_result.stdout.readline, ''):
+            self.q.put(line)
+        if command_result.stderr:
+            self.q.put(command_result.stderr)
+
 
     def run_script(self):
         self.auto_save_file()

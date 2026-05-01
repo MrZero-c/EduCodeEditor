@@ -4,3 +4,5 @@ __pycache__/
 doc/
 test*
 venv
+test.py
+last_version/test*
