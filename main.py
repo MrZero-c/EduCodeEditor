@@ -5,6 +5,7 @@ import re
 import themes
 import threading
 import queue
+import psutil
 
 class Editor:
     def __init__(self,root):
@@ -178,20 +179,40 @@ class Editor:
         if event is not None:
             return "break"
 
-    def stop_running(self,event = None):
-        self.thread_popen.stop()
+    def stop_running(self, event=None):
+        try:
+            current_pid = self.command_result.pid
+            parent = psutil.Process(current_pid)
+            
+            for child in parent.children(recursive=True):
+                child.kill()
+            parent.kill()
+            parent.wait()
+            
+            with self.q.mutex:
+                self.q.queue.clear()
+                
+            self.terminal_field.insert(tk.END, "\nПроцесс остановлен\n", 'readonly')
+            self.terminal_field.see(tk.END)
+            
+        except (psutil.NoSuchProcess, AttributeError):
+            pass
 
     def get_async_output(self):
-        
+        lines_processed = 0
         try:
-            line = self.q.get_nowait()
-            self.terminal_field.insert(tk.END,f'{line}', 'readonly')
-            self.terminal_field.see(tk.END)
-            self.q.task_done()
+            while lines_processed < 10:
+                line = self.q.get_nowait()
+                self.terminal_field.insert(tk.END, f'{line}', 'readonly')
+                lines_processed += 1
+                self.q.task_done()
         except queue.Empty:
             pass
-        root.after(1, self.get_async_output)
-
+        
+        if lines_processed > 0:
+            self.terminal_field.see(tk.END)
+            
+        self.root.after(1, self.get_async_output)
     def async_popen(self,command):
         self.command_result = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True, text = True,bufsize = 1)
         self.q.put(f'\n')
