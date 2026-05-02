@@ -10,6 +10,7 @@ class Editor:
     def __init__(self,root):
         self.file_save_path = None
         self.root = root
+        self.q = queue.Queue()
         self.setup_ui()
         self.setup_menu()
         self.themes_menu_setup()
@@ -18,6 +19,7 @@ class Editor:
         self.tag_init()
         self.highlight()
         self.terminal_field.insert('end', '>')
+        self.get_async_output()
 
     def setup_ui(self):
         self.input_field = scrolledtext.ScrolledText(self.root, wrap = 'none',width = 40,height = 10,font = ('Consolas', 10))
@@ -172,11 +174,9 @@ class Editor:
     def run_command(self, event = None):
         terminal_command = self.get_terminal_command()
         self.thread_popen = threading.Thread(target = self.async_popen, args=(terminal_command,))
-        self.q = queue.Queue()
         self.thread_popen.daemon = True
         self.thread_popen.start()
 
-        self.get_async_output()
         
         if event is not None:
             return "break"
@@ -190,9 +190,7 @@ class Editor:
             self.q.task_done()
         except queue.Empty:
             pass
-        
         root.after(1, self.get_async_output)
-
 
     def async_popen(self,command):
         command_result = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True, text = True,bufsize = 1)
