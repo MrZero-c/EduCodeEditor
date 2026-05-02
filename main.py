@@ -45,9 +45,9 @@ class Editor:
         # Функциональные кнопки
 
         self.main_menu.add_command(label = "Запустить", command = self.run_script)
+        self.main_menu.add_command(label = "Остановить", command = self.stop_running)
  
     def themes_menu_setup(self):
-
         self.themes_list = {'Black': themes.DARK_THEME,
                        'Tokyo_night': themes.TOKYO_NIGHT,
                        'White': themes.LIGHT_THEME}
@@ -114,8 +114,6 @@ class Editor:
             end_index = f'1.0 + {match.end()} chars'
             self.input_field.tag_add(kind,start_index, end_index)
 
-
-
     def check_readonly(self,event):
         cursor_index = self.terminal_field.index(tk.INSERT)
         line, sumb = cursor_index.split('.')
@@ -177,9 +175,11 @@ class Editor:
         self.thread_popen.daemon = True
         self.thread_popen.start()
 
-        
         if event is not None:
             return "break"
+
+    def stop_running(self,event = None):
+        self.thread_popen.stop()
 
     def get_async_output(self):
         
@@ -193,11 +193,11 @@ class Editor:
         root.after(1, self.get_async_output)
 
     def async_popen(self,command):
-        command_result = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True, text = True,bufsize = 1)
+        self.command_result = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True, text = True,bufsize = 1)
         self.q.put(f'\n')
-        for line in iter(command_result.stdout.readline, ''):
+        for line in iter(self.command_result.stdout.readline, ''):
             self.q.put(line)
-        for line in iter(command_result.stderr.readline, ''):
+        for line in iter(self.command_result.stderr.readline, ''):
             if line:
                 self.q.put(f'\n{line}')
         self.q.put(f'>')
