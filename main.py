@@ -19,8 +19,6 @@ class Editor:
         self.key_binds()
         self.tag_init()
         self.highlight()
-        self.terminal_field.insert('end', '>')
-        self.get_async_output()
 
     def setup_ui(self):
         self.input_field = scrolledtext.ScrolledText(self.root, wrap = 'none',width = 40,height = 10,font = ('Consolas', 10))
@@ -28,8 +26,11 @@ class Editor:
         self.horizontal_scroll = ttk.Scrollbar(self.root, orient = 'horizontal', command=self.input_field.xview)
         self.horizontal_scroll.pack(side = tk.BOTTOM, fill = tk.X)
         self.input_field.configure(xscrollcommand=self.horizontal_scroll.set)
-        self.terminal_field = scrolledtext.ScrolledText(self.root, wrap = 'none', width=10, height=10)
-        self.terminal_field.pack(fill = 'both')
+
+        #Creating object terminal
+
+        self.terminal = Terminal(self.root)
+        self.terminal.setup_terminal()
 
     def setup_menu(self):
         self.main_menu = tk.Menu(self.root)
@@ -46,7 +47,7 @@ class Editor:
         # Функциональные кнопки
 
         self.main_menu.add_command(label = "Запустить", command = self.run_script)
-        self.main_menu.add_command(label = "Остановить", command = self.stop_running)
+        self.main_menu.add_command(label = "Остановить", command = self.terminal.stop_running)
  
     def themes_menu_setup(self):
         self.themes_list = {'Black': themes.DARK_THEME,
@@ -60,8 +61,6 @@ class Editor:
             self.themes_menu.add_command(label = label, command = lambda t=name: self.change_theme(t))
 
     def key_binds(self):
-        self.terminal_field.bind('<Return>', self.run_command) 
-        self.terminal_field.bind('<Key>', self.check_readonly)
         self.input_field.bind('<KeyRelease>', self.highlight)
 
     def tag_init(self):
@@ -76,13 +75,11 @@ class Editor:
     def change_theme(self,theme):
         if theme:
             self.root.config(bg = theme['root_bg'])
-            self.input_field.config(bg = theme['input_bg'], fg = theme['input_fg'],bd = 0,relief = 'flat',
-                                    highlightthickness=0,insertbackground=theme['cursor'])
-            self.terminal_field.config(bg = theme['term_bg'], fg = theme['term_fg'],bd = 0, relief = 'flat',
-                                       highlightthickness=0,insertbackground=theme['cursor'])
+            self.input_field.config(bg = theme['input_bg'], fg = theme['input_fg'],bd = 0,relief = 'flat',highlightthickness=0,insertbackground=theme['cursor'])
             self.main_menu.config(bg = theme['menu_bg'],fg = theme['menu_fg'],bd = 0, relief = 'flat')
-
             menus = [self.file_menu, self.themes_menu]
+
+            self.terminal.change_theme(theme)
 
             for m in menus:
                 m.config(bg = theme['menu_bg'],fg = theme['menu_fg'])
@@ -115,16 +112,6 @@ class Editor:
             end_index = f'1.0 + {match.end()} chars'
             self.input_field.tag_add(kind,start_index, end_index)
 
-    def check_readonly(self,event):
-        cursor_index = self.terminal_field.index(tk.INSERT)
-        line, sumb = cursor_index.split('.')
-        sumb = int(sumb) + 2
-        sumb = str(sumb)
-        index = line + '.' + sumb
-        tag_at_cursor = self.terminal_field.tag_names(index)
-        if 'readonly' in tag_at_cursor:
-            return 'break'
-        
     def open_file(self, event = None):
         ask_file_path = filedialog.askopenfilename(title = "Выберете файл")
         if not ask_file_path:
@@ -160,59 +147,90 @@ class Editor:
         else:
             self.save_file()
     
-    def get_terminal_command(self):
-        all_content_with_terminal = self.terminal_field.get('1.0', tk.END)
+    def run_script(self):
+        self.auto_save_file()
+        self.terminal.run_script(self.file_save_path)
+
+
+
+class Terminal:
+    def __init__(self, root):
+       self.root = root
+       self.q = queue.Queue()
+       self.get_async_output()
+
+    def setup_terminal(self):
+        self.terminal = scrolledtext.ScrolledText(self.root, wrap = 'none', width = 10, height = 10)
+        self.terminal.pack(fill = 'both')
+        self.terminal.insert(tk.END, '>')
+        self.key_binds_init()
+
+    def key_binds_init(self):
+        self.terminal.bind('<Return>', self.run_command)
+        self.terminal.bind('<Key>', self.check_readonly)
+
+    def check_readonly(self, event):
+        None
+
+    def get_commands(self):
+        all_content_with_terminal = self.terminal.get('1.0', tk.END)
         content_lines = all_content_with_terminal.splitlines()
         for line_index in range(len(content_lines)):
             invite_index = content_lines[line_index].find('>')
             if invite_index != -1:  
-                new_command = self.terminal_field.get(f'{line_index + 1}.{invite_index + 1}', f'{line_index + 1}.end')
+                new_command = self.terminal.get(f'{line_index + 1}.{invite_index + 1}', f'{line_index + 1}.end')
                 command = new_command
         return command
-
+    
     def run_command(self, event = None):
-        terminal_command = self.get_terminal_command()
+        terminal_command = self.get_commands()
         self.thread_popen = threading.Thread(target = self.async_popen, args=(terminal_command,))
         self.thread_popen.daemon = True
         self.thread_popen.start()
 
         if event is not None:
             return "break"
+        
+    def run_script(self, script_path):
+        self.terminal.insert(tk.END,f'python -u {script_path}')
+        self.run_command()
 
+        
     def stop_running(self, event=None):
-        try:
-            current_pid = self.command_result.pid
-            parent = psutil.Process(current_pid)
+            try:
+                current_pid = self.command_result.pid
+                parent = psutil.Process(current_pid)
             
-            for child in parent.children(recursive=True):
-                child.kill()
-            parent.kill()
-            parent.wait()
+                for child in parent.children(recursive=True):
+                    child.kill()
+                parent.kill()
+                parent.wait()
             
-            with self.q.mutex:
-                self.q.queue.clear()
+                with self.q.mutex:
+                    self.q.queue.clear()
                 
-            self.terminal_field.insert(tk.END, "\nПроцесс остановлен\n", 'readonly')
-            self.terminal_field.see(tk.END)
+                self.terminal.insert(tk.END, "\nПроцесс остановлен\n>", 'readonly')
+                self.terminal.see(tk.END)
             
-        except (psutil.NoSuchProcess, AttributeError):
-            pass
+            except (psutil.NoSuchProcess, AttributeError):
+                pass
 
     def get_async_output(self):
         lines_processed = 0
         try:
             while lines_processed < 10:
                 line = self.q.get_nowait()
-                self.terminal_field.insert(tk.END, f'{line}', 'readonly')
+                self.terminal.insert(tk.END, f'{line}', 'readonly')
                 lines_processed += 1
                 self.q.task_done()
         except queue.Empty:
             pass
         
         if lines_processed > 0:
-            self.terminal_field.see(tk.END)
+            self.terminal.see(tk.END)
             
         self.root.after(1, self.get_async_output)
+
     def async_popen(self,command):
         self.command_result = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE, shell = True, text = True,bufsize = 1)
         self.q.put(f'\n')
@@ -223,11 +241,8 @@ class Editor:
                 self.q.put(f'\n{line}')
         self.q.put(f'>')
 
-
-    def run_script(self):
-        self.auto_save_file()
-        self.terminal_field.insert(tk.END, f'python {self.file_save_path}')
-        self.run_command()    
+    def change_theme(self, theme):
+       self.terminal.config(bg = theme['term_bg'], fg = theme['term_fg'],bd = 0, relief = 'flat',highlightthickness=0,insertbackground=theme['cursor'])
         
 if __name__ == '__main__':
     root = tk.Tk()
