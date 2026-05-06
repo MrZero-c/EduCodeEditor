@@ -164,7 +164,6 @@ class Terminal:
         self.terminal.pack(fill = 'both')
         self.terminal.insert(tk.END, '>')
         self.key_binds_init()
-        self.terminal.insert(tk.END, 'test', 'readonly')
 
     def key_binds_init(self):
         self.terminal.bind('<Return>', self.run_command)
