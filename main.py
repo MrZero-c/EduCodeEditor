@@ -164,13 +164,27 @@ class Terminal:
         self.terminal.pack(fill = 'both')
         self.terminal.insert(tk.END, '>')
         self.key_binds_init()
+        self.terminal.insert(tk.END, 'test', 'readonly')
 
     def key_binds_init(self):
         self.terminal.bind('<Return>', self.run_command)
         self.terminal.bind('<Key>', self.check_readonly)
 
     def check_readonly(self, event):
-        None
+        cursor_index =  self.terminal.index('insert')
+        after_cursor_index = self.terminal.index('insert + 1c')
+        before_cursor_index = self.terminal.index('insert - 1c')
+        tag = self.terminal.tag_names(cursor_index)
+        tag_after_cursor = self.terminal.tag_names(after_cursor_index)
+        tag_before_cursor = self.terminal.tag_names(before_cursor_index)
+        print(event.keysym)
+        ranges = self.terminal.tag_ranges('readonly')
+        move_keys = ['Up','Down','Right','Left']
+        if event.keysym == 'BackSpace' and 'readonly' in tag_before_cursor:
+            return 'break'
+        if  'readonly' in tag and 'readonly' in tag_before_cursor and event.keysym not in move_keys:
+            return 'break'
+            
 
     def get_commands(self):
         all_content_with_terminal = self.terminal.get('1.0', tk.END)
