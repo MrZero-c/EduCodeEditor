@@ -177,12 +177,13 @@ class Terminal:
         tag = self.terminal.tag_names(cursor_index)
         tag_after_cursor = self.terminal.tag_names(after_cursor_index)
         tag_before_cursor = self.terminal.tag_names(before_cursor_index)
-        print(event.keysym)
         ranges = self.terminal.tag_ranges('readonly')
         move_keys = ['Up','Down','Right','Left']
         if event.keysym == 'BackSpace' and 'readonly' in tag_before_cursor:
             return 'break'
         if  'readonly' in tag and 'readonly' in tag_before_cursor and event.keysym not in move_keys:
+            return 'break'
+        if 'readonly' in tag_after_cursor and event.keysym not in move_keys:
             return 'break'
             
 
